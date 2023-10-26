@@ -1,5 +1,7 @@
 use std::{path::Path, error::Error};
 
+const UPOWER_PATH: &str = "/var/lib/upower";
+
 #[derive(Debug)]
 pub struct HistoryEntry {
     time: u64,
@@ -22,8 +24,31 @@ pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, ()> {
 }
 
 pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), ()> {
-    let charge = parse_file(Path::new("/var/lib/upower/history-charge-45N1029-86-18880.dat"))?;
-    let rate = parse_file(Path::new("/var/lib/upower/history-rate-45N1029-86-18880.dat"))?;
+    let upower_entries = std::fs::read_dir(UPOWER_PATH).unwrap();
+    let mut charge_filename: Option<String> = None;
+    let mut rate_filename: Option<String> = None;
+
+    let charge_pattern = format!("history-charge-{}", device_name);
+    let rate_pattern = format!("history-rate-{}", device_name);
+    for x in upower_entries {
+        if let Ok(t) = x {
+            if let Ok(s) = t.file_name().into_string() {
+                if charge_filename.is_none() && s.starts_with(&charge_pattern) {
+                    charge_filename = Some(s)
+                } else if rate_filename.is_none() && s.starts_with(&rate_pattern) {
+                    rate_filename = Some(s)
+                }
+            }
+        }
+    }
+    //TODO don't assume they were found
+    let charge_path_str = format!("{}/{}", UPOWER_PATH, charge_filename.unwrap());
+    let rate_path_str = format!("{}/{}", UPOWER_PATH, rate_filename.unwrap());
+    let charge_path = Path::new(&charge_path_str);
+    let rate_path = Path::new(&rate_path_str);
+
+    let charge = parse_file(charge_path)?;
+    let rate = parse_file(rate_path)?;
     Ok((charge, rate))
 }
 
