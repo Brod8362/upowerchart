@@ -1,8 +1,7 @@
-use std::{error::Error, str::FromStr};
+use std::error::Error;
 
 use argparse::{ArgumentParser, Store};
 use config::RenderConfig;
-use plotters::style::RGBColor;
 
 mod history;
 mod buffer;
