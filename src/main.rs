@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fs::File};
 
 extern crate upower_dbus;
 mod history;
@@ -9,5 +9,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         String::from("45N1029"), 100
     )?;
     println!("{:?} {:?}", charge.last(), power.last());
+
+    let graph = history::generate_graph(&charge, &power)?;
+    
+    let mut file = File::create("output.png")?;
+    graph.write_to_png(&mut file)?;
+    
     Ok(())
 }

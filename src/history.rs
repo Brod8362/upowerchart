@@ -1,5 +1,7 @@
 use std::{path::Path, error::Error};
 
+use cairo::{ImageSurface, Context};
+
 const UPOWER_PATH: &str = "/var/lib/upower";
 
 #[derive(Debug)]
@@ -52,6 +54,11 @@ pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>
     Ok((charge, rate))
 }
 
-pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) {
-    todo!()
+pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result<ImageSurface, Box<dyn Error>> {
+    let surface = ImageSurface::create(cairo::Format::ARgb32, 100, 100)?;
+    let context = Context::new(&surface)?;
+    context.set_source_rgb(1.0, 0.0, 0.0);
+    context.paint()?;
+    
+    Ok(surface)
 }
