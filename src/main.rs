@@ -6,6 +6,7 @@ use config::RenderConfig;
 mod history;
 mod buffer;
 mod config;
+mod render;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut config = RenderConfig {
@@ -56,7 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (charge, power) = history::get_history(&config.device)?;
 
-    history::generate_graph(&charge, &power, &config)?;
+    render::render_graph(&charge, &power, &config)?;
     
     Ok(())
 }
