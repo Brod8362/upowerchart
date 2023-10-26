@@ -1,6 +1,6 @@
 use std::{path::Path, error::Error, cmp::max};
 
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{ORANGE, GREEN}, WHITE, RGBColor}};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -62,19 +62,21 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     let width = 300;
     let height = 200;
     let label_area_size = 20;
-    let graph_margin = 15;
+    let graph_margin = 10;
 
+    //style settings
     let axis_color = RGBColor(255,255,255);
     let background_color = RGBColor(0,0,0);
     let charge_color = RGBColor(0,255,0);
     let rate_color = ORANGE;
+    let font = ("monospace", 12);
 
     let hours: i32 = 3;
 
     //filter by data within the past 6 hours
     let last_timestamp = max(charge.last().unwrap().time, power.last().unwrap().time);
     let first_timestamp = last_timestamp - (60*60*hours as u64); //6 hours
-    
+
     //convert data into time-series, relative to hours
     let charge_series = charge.iter()
         .filter(|x| x.time > first_timestamp)
@@ -86,6 +88,10 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
 
     let drawing_area = BitMapBackend::new("output.png", (width, height)).into_drawing_area();
     drawing_area.fill(&background_color)?;
+
+    let text_style = TextStyle::from(font)
+        .color(&axis_color)
+        .into_text_style(&drawing_area);
 
     let time_range = first_timestamp as i32..last_timestamp as i32;
 
@@ -121,7 +127,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
         .axis_style(&axis_color)
         .x_desc("hours")
         .x_labels(hours as usize)
-        .label_style(&axis_color)
+        .label_style(text_style)
         .draw()?;
 
     //TODO: draw right Y axis for power
