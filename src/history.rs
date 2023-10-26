@@ -131,7 +131,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
         .axis_style(&axis_color)
         .x_desc("hours")
         .x_labels(hours as usize)
-        .label_style(text_style)
+        .label_style(text_style.clone())
         .draw()?;
 
     //TODO: draw right Y axis for power
@@ -145,6 +145,20 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
         ).border_style(&charge_color)
     )?;
 
+    let texts = [
+        (format!("BAT: {}%", charge.last().unwrap().value), &text_style.color(&charge_color)),
+        (format!("PWR: {:.1}W", power.last().unwrap().value), &text_style.color(&rate_color))
+    ];
+
+    let (_, text_h) = drawing_area.estimate_text_size("?", &text_style)?;
+    let y_pos = (height - text_h - bottom_margin_extra/2) as i32;
+    let mut x = 20;
+    for (text, style) in texts {
+        drawing_area.draw_text(&text, &style, (x, y_pos))?;
+        let (tx, _) = drawing_area.estimate_text_size(&text, &style)?;
+        x = x + tx as i32 + 5; //5 is text margin
+    }
+    
     rate_chart.draw_series(LineSeries::new(rate_series, rate_color))?;
     Ok(())
 }
