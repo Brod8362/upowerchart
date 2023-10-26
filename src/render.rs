@@ -57,7 +57,11 @@ pub fn render_graph(charge: &[HistoryEntry], power: &[HistoryEntry], config: &Re
 
     // drawing 
     let mut buf = BufferWrapper(vec![0u32; width as usize*height as usize]);
-    let mut window = Window::new("battery", width as usize, height as usize, WindowOptions::default())?;
+    let mut window_options = WindowOptions::default();
+    window_options.borderless = true;
+    window_options.topmost = true;
+    let window_title = format!("upowerchart - {}", &config.device);
+    let mut window = Window::new(&window_title, width as usize, height as usize, window_options)?;
     window.limit_update_rate(Some(std::time::Duration::from_millis(100)));
     
     {
