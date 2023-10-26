@@ -1,6 +1,9 @@
-use std::{path::Path, error::Error, cmp::max};
+use std::{path::Path, error::Error, cmp::max, borrow::{BorrowMut, Borrow}};
 
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color, CYAN}};
+use minifb::{Window, WindowOptions, Key};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color, CYAN}, backend::BGRXPixel};
+
+use crate::buffer::BufferWrapper;
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -55,11 +58,11 @@ pub fn get_history(device_name: &String) -> Result<(Vec<HistoryEntry>, Vec<Histo
 }
 
 pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &String) -> Result<(), Box<dyn Error>> {
-    let width = 300;
-    let height = 200;
-    let label_area_size = 20;
-    let graph_margin = 10;
-    let bottom_margin_extra = 10;
+    let width: i32 = 300;
+    let height: i32 = 200;
+    let label_area_size: i32 = 20;
+    let graph_margin: i32 = 10;
+    let bottom_margin_extra: i32 = 10;
 
     //style settings
     let axis_color = RGBColor(255,255,255);
@@ -104,10 +107,14 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &S
             (entry.time as i32, s)
         });
 
-    
-
-    let drawing_area = BitMapBackend::new("output.png", (width, height)).into_drawing_area();
+    // drawing 
+    let mut buf = BufferWrapper(vec![0u32; width as usize*height as usize]);
+    let drawing_area = BitMapBackend::<BGRXPixel>::with_buffer_and_format(
+        buf.borrow_mut(), (width as u32, height as u32)
+    )?.into_drawing_area();
     drawing_area.fill(&background_color)?;
+
+    let window = Window::new("battery", width as usize, height as usize, WindowOptions::default())?;
 
     let text_style = TextStyle::from(font)
         .color(&axis_color)
@@ -171,7 +178,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &S
     ];
 
     let (_, text_h) = drawing_area.estimate_text_size("?", &text_style)?;
-    let y_pos = (height - text_h - bottom_margin_extra/2) as i32;
+    let y_pos = (height - text_h as i32- bottom_margin_extra/2) as i32;
     let mut x = 20;
     for (text, style) in texts {
         drawing_area.draw_text(&text, &style, (x, y_pos))?;
@@ -181,5 +188,10 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &S
     
     rate_chart.draw_series(LineSeries::new(chg_rate_series, charging_color))?;
     rate_chart.draw_series(LineSeries::new(dischchg_rate_series, discharging_color))?;
+
+    drawing_area.present()?;
+
+
+    window.update_with_buffer(buf.borrow(), width as usize, height as usize)?;
     Ok(())
 }

@@ -3,6 +3,7 @@ use std::{error::Error};
 use argparse::{ArgumentParser, Store};
 
 mod history;
+mod buffer;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut device: String = String::new();
