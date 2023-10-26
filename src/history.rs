@@ -1,7 +1,6 @@
 use std::{path::Path, error::Error, cmp::max};
 
-use cairo::{ImageSurface, Context};
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{RED, ORANGE, GREEN}, WHITE, Color, BLUE}};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{ORANGE, GREEN}, WHITE, RGBColor}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -26,7 +25,7 @@ pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, Box<dyn Error>> {
     )
 }
 
-pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), Box<dyn Error>> {
+pub fn get_history(device_name: String) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), Box<dyn Error>> {
     let upower_entries = std::fs::read_dir(UPOWER_PATH)?;
     let mut charge_filename: Option<String> = None;
     let mut rate_filename: Option<String> = None;
@@ -60,10 +59,15 @@ fn convert_entry(entry: &HistoryEntry) -> (i32, i32) {
 }
 
 pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result<(), Box<dyn Error>> {
-    let width = 600;
-    let height = 400;
+    let width = 300;
+    let height = 200;
     let label_area_size = 20;
     let graph_margin = 15;
+
+    let axis_color = RGBColor(255,255,255);
+    let background_color = RGBColor(0,0,0);
+    let charge_color = RGBColor(0,255,0);
+    let rate_color = ORANGE;
 
     let hours: i32 = 3;
 
@@ -81,6 +85,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
         .map(|x| convert_entry(x));
 
     let drawing_area = BitMapBackend::new("output.png", (width, height)).into_drawing_area();
+    drawing_area.fill(&background_color)?;
 
     let time_range = first_timestamp as i32..last_timestamp as i32;
 
@@ -113,16 +118,16 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     time_chart
         .configure_mesh()
         .disable_mesh()
-        .axis_style(&WHITE)
+        .axis_style(&axis_color)
         .x_desc("hours")
         .x_labels(hours as usize)
-        .label_style(&WHITE)
+        .label_style(&axis_color)
         .draw()?;
 
     //TODO: draw right Y axis for power
 
     //draw the actual data
-    charge_chart.draw_series(LineSeries::new(charge_series, &GREEN))?;
-    rate_chart.draw_series(LineSeries::new(rate_series, &ORANGE))?;
+    charge_chart.draw_series(LineSeries::new(charge_series, charge_color))?;
+    rate_chart.draw_series(LineSeries::new(rate_series, rate_color))?;
     Ok(())
 }
