@@ -10,3 +10,4 @@ tokio = {version = "1.33.0", features=["full"]}
 upower_dbus = "0.3.2"
 zbus = "3.14.1"
 cairo-rs = {version = "0.18.2", features=["xcb", "png"]}
+plotters = "0.3.5"

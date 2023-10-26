@@ -1,6 +1,7 @@
-use std::{path::Path, error::Error};
+use std::{path::Path, error::Error, cmp::max};
 
 use cairo::{ImageSurface, Context};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{RED, ORANGE, GREEN}, WHITE, Color, BLUE}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -54,45 +55,71 @@ pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>
     Ok((charge, rate))
 }
 
-pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result<ImageSurface, Box<dyn Error>> {
+fn convert_entry(entry: &HistoryEntry) -> (i32, i32) {
+    (entry.time as i32, entry.value.round() as i32)
+}
+
+pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result<(), Box<dyn Error>> {
     let width = 600;
     let height = 400;
-    let surface = ImageSurface::create(cairo::Format::ARgb32, width, height)?;
-    let context = Context::new(&surface)?;
+    let label_area_size = 20;
+    let graph_margin = 15;
 
-    //TODO these should be passed in via some kind of config object
-    let background_color = (0.0, 0.0, 0.0);
-    let battery_color = (0.0, 1.0, 0.0);
+    let hours: i32 = 3;
 
-    // fill background
-    context.set_source_rgb(background_color.0, background_color.1, background_color.2);
-    context.paint()?;
-
+    //filter by data within the past 6 hours
+    let last_timestamp = max(charge.last().unwrap().time, power.last().unwrap().time);
+    let first_timestamp = last_timestamp - (60*60*hours as u64); //6 hours
     
-    let max_power = power
-        .into_iter()
-        .map(|k| k.value)
-        .max_by(|x, y| x.total_cmp(y))
+    //convert data into time-series, relative to hours
+    let charge_series = charge.iter()
+        .filter(|x| x.time > first_timestamp)
+        .map(|x| convert_entry(x));
+
+    let rate_series = power.iter()
+        .filter(|x| x.time > first_timestamp)
+        .map(|x| convert_entry(x));
+
+    let drawing_area = BitMapBackend::new("output.png", (width, height)).into_drawing_area();
+
+    let time_range = first_timestamp as i32..last_timestamp as i32;
+
+    let mut charge_chart = ChartBuilder::on(&drawing_area)
+        .margin(graph_margin)
+        .set_label_area_size(LabelAreaPosition::Left, label_area_size)
+        .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
+        .build_cartesian_2d(time_range.clone(), 0..100)
         .unwrap();
 
-    //draw battery percentage 
-    {
-        let max_charge = 100.0f64;
-        context.set_source_rgb(battery_color.0, battery_color.1, battery_color.2);
-        let x_step = width as f64/charge.len() as f64;
-        for i in 1..charge.len() {
-            let prev = &charge[i-1];
-            let this = &charge[i];
-            let prev_x = (i-1) as f64*x_step;
-            let x = i as f64*x_step;
-            let prev_y = prev.value/max_charge;
-            let y = height as f64*(this.value/max_charge);
-            context.move_to(prev_x, height as f64 - prev_y);
-            context.line_to(x, height as f64 - y);
-        }
-        context.stroke()?;
-    }
-    
-    
-    Ok(surface)
+    let rate_max = power.iter().map(|x| x.value).max_by(|x, y| x.total_cmp(y)).unwrap().ceil() as i32;
+
+    let mut rate_chart = ChartBuilder::on(&drawing_area)
+        .margin(graph_margin)
+        .set_label_area_size(LabelAreaPosition::Left, label_area_size)
+        .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
+        .build_cartesian_2d(time_range, 0..rate_max)
+        .unwrap();
+
+    // this is only used to draw a custom axis
+    let mut time_chart = ChartBuilder::on(&drawing_area)
+        .margin(graph_margin)
+        .set_label_area_size(LabelAreaPosition::Left, label_area_size)
+        .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
+        .build_cartesian_2d(-hours..0, 0..100)
+        .unwrap();
+
+    //draws X axis with the marks being hours
+    //draws Y axis with 10 marks (being for battery %)
+    time_chart
+        .configure_mesh()
+        .axis_style(&WHITE)
+        .x_labels(hours as usize)
+        .label_style(&WHITE)
+        .draw()?;
+
+    //TODO: draw right Y axis for power
+
+    charge_chart.draw_series(LineSeries::new(charge_series, &GREEN))?;
+    rate_chart.draw_series(LineSeries::new(rate_series, &ORANGE))?;
+    Ok(())
 }
