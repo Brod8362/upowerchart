@@ -1,9 +1,9 @@
 use std::{path::Path, error::Error, cmp::max, borrow::{BorrowMut, Borrow}};
 
 use minifb::{Window, WindowOptions, Key, MouseButton};
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color, CYAN}, backend::BGRXPixel};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{TextStyle, IntoTextStyle, Color}, backend::BGRXPixel};
 
-use crate::buffer::BufferWrapper;
+use crate::{buffer::BufferWrapper, config::{RenderConfig, parse_color}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -57,19 +57,19 @@ pub fn get_history(device_name: &String) -> Result<(Vec<HistoryEntry>, Vec<Histo
     Ok((charge, rate))
 }
 
-pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &String) -> Result<(), Box<dyn Error>> {
-    let width: i32 = 300;
-    let height: i32 = 200;
-    let label_area_size: i32 = 20;
-    let graph_margin: i32 = 10;
-    let bottom_margin_extra: i32 = 10;
+pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], config: &RenderConfig) -> Result<(), Box<dyn Error>> {
+    let width: i32 = config.width;
+    let height: i32 = config.height;
+    let label_area_size: i32 = config.label_area_size;
+    let graph_margin: i32 = config.graph_margin;
+    let bottom_margin_extra: i32 = config.bottom_margin_extra;
 
     //style settings
-    let axis_color = RGBColor(255,255,255);
-    let background_color = RGBColor(0,0,0);
-    let percent_color = RGBColor(0,255,0);
-    let charging_color = CYAN;
-    let discharging_color = ORANGE;
+    let axis_color = parse_color(&config.axis_color)?;
+    let background_color = parse_color(&config.background_color)?;
+    let percent_color = parse_color(&config.percent_color)?;
+    let charging_color = parse_color(&config.charging_color)?;
+    let discharging_color = parse_color(&config.discharging_color)?;
     let font = ("monospace", 12);
 
     let hours: i32 = 3;
@@ -174,7 +174,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &S
         )?;
 
         let texts = [
-            (model.clone(), &text_style),
+            (config.device.to_string(), &text_style),
             (format!("BAT: {}%", charge.last().unwrap().value), &text_style.color(&percent_color)),
             (format!("PWR: {:.1}W", power.last().unwrap().value), &text_style.color(&discharging_color))
         ];
