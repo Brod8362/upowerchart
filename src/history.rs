@@ -1,6 +1,6 @@
 use std::{path::Path, error::Error, cmp::max};
 
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::LineSeries, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle}};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -63,6 +63,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     let height = 200;
     let label_area_size = 20;
     let graph_margin = 10;
+    let bottom_margin_extra = 10;
 
     //style settings
     let axis_color = RGBColor(255,255,255);
@@ -97,6 +98,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
 
     let mut charge_chart = ChartBuilder::on(&drawing_area)
         .margin(graph_margin)
+        .margin_bottom(graph_margin+bottom_margin_extra)
         .set_label_area_size(LabelAreaPosition::Left, label_area_size)
         .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
         .build_cartesian_2d(time_range.clone(), 0..100)
@@ -106,6 +108,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
 
     let mut rate_chart = ChartBuilder::on(&drawing_area)
         .margin(graph_margin)
+        .margin_bottom(graph_margin+bottom_margin_extra)
         .set_label_area_size(LabelAreaPosition::Left, label_area_size)
         .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
         .build_cartesian_2d(time_range, 0..rate_max)
@@ -114,6 +117,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     // this is only used to draw a custom axis
     let mut time_chart = ChartBuilder::on(&drawing_area)
         .margin(graph_margin)
+        .margin_bottom(graph_margin+bottom_margin_extra)
         .set_label_area_size(LabelAreaPosition::Left, label_area_size)
         .set_label_area_size(LabelAreaPosition::Bottom, label_area_size)
         .build_cartesian_2d(-hours..0, 0..100)
@@ -133,7 +137,14 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     //TODO: draw right Y axis for power
 
     //draw the actual data
-    charge_chart.draw_series(LineSeries::new(charge_series, charge_color))?;
+    charge_chart.draw_series(
+        AreaSeries::new(
+            charge_series, 
+            0, 
+            charge_color.mix(0.2)
+        ).border_style(&charge_color)
+    )?;
+
     rate_chart.draw_series(LineSeries::new(rate_series, rate_color))?;
     Ok(())
 }
