@@ -2,7 +2,7 @@
 
 Small rust program to display upower history, intended for i3
 
-[[/screenshot.png?raw=true]]
+!(Example screenshot)[/screenshot.png?raw=true]
 
 # Usage
 
