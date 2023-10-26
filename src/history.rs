@@ -25,7 +25,7 @@ pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, Box<dyn Error>> {
     )
 }
 
-pub fn get_history(device_name: String) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), Box<dyn Error>> {
+pub fn get_history(device_name: &String) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), Box<dyn Error>> {
     let upower_entries = std::fs::read_dir(UPOWER_PATH)?;
     let mut charge_filename: Option<String> = None;
     let mut rate_filename: Option<String> = None;
