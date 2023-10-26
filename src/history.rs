@@ -1,5 +1,6 @@
 use std::{path::Path, error::Error};
 
+#[derive(Debug)]
 pub struct HistoryEntry {
     time: u64,
     value: f64,
@@ -14,7 +15,7 @@ pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, ()> {
             HistoryEntry {
                 time: groups.next().unwrap().parse().unwrap(),
                 value: groups.next().unwrap().parse().unwrap(),
-                charging: groups.next().unwrap() == "discharging"
+                charging: groups.next().unwrap() == "charging"
             }
         }).collect()
     )
