@@ -112,13 +112,16 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     //draws Y axis with 10 marks (being for battery %)
     time_chart
         .configure_mesh()
+        .disable_mesh()
         .axis_style(&WHITE)
+        .x_desc("hours")
         .x_labels(hours as usize)
         .label_style(&WHITE)
         .draw()?;
 
     //TODO: draw right Y axis for power
 
+    //draw the actual data
     charge_chart.draw_series(LineSeries::new(charge_series, &GREEN))?;
     rate_chart.draw_series(LineSeries::new(rate_series, &ORANGE))?;
     Ok(())
