@@ -9,7 +9,7 @@ pub struct HistoryEntry {
     charging: bool
 }
 
-pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, ()> {
+pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, Box<dyn Error>> {
     let file = std::fs::read_to_string(path).unwrap();
     Ok(
         file.lines().map(|l| {
@@ -23,8 +23,8 @@ pub fn parse_file(path: &Path) -> Result<Vec<HistoryEntry>, ()> {
     )
 }
 
-pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), ()> {
-    let upower_entries = std::fs::read_dir(UPOWER_PATH).unwrap();
+pub fn get_history(device_name: String, len: usize) -> Result<(Vec<HistoryEntry>, Vec<HistoryEntry>), Box<dyn Error>> {
+    let upower_entries = std::fs::read_dir(UPOWER_PATH)?;
     let mut charge_filename: Option<String> = None;
     let mut rate_filename: Option<String> = None;
 
