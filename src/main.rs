@@ -30,9 +30,27 @@ fn main() -> Result<(), Box<dyn Error>> {
             .required()
             .add_option(&["-d", "--device"], Store, "device model to use");
         ap.refer(&mut config.width)
-            .add_option(&["-w"], Store, "window width");
+            .add_option(&["-w"], Store, "window width [default 300]");
         ap.refer(&mut config.height)
-            .add_option(&["-h"], Store, "window height");
+            .add_option(&["-h"], Store, "window height [default 200]");
+        ap.refer(&mut config.hours)
+            .add_option(&["-t"], Store, "display range (hours) [default 3]");
+        ap.refer(&mut config.label_area_size)
+            .add_option(&["--label-area-size"], Store, "label area size [default 20]");
+        ap.refer(&mut config.graph_margin)
+            .add_option(&["--graph-margin"], Store, "graph margin [default 10]");
+        ap.refer(&mut config.bottom_margin_extra)
+            .add_option(&["--bottom-margin-extra"], Store, "bottom margin extra [default 10]");
+        ap.refer(&mut config.axis_color)
+            .add_option(&["-a", "--axis-color"], Store, "axis color [default #FFFFFF]");
+        ap.refer(&mut config.background_color)
+            .add_option(&["-b", "--background-color"], Store, "background color [default #000000]");
+        ap.refer(&mut config.percent_color)
+            .add_option(&["-p", "--percent-color"], Store, "percent color [default #00FF00]");
+        ap.refer(&mut config.charging_color)
+            .add_option(&["-c", "--charging-color"], Store, "charging color [default #00FFFF]");
+        ap.refer(&mut config.discharging_color)
+            .add_option(&["-x", "--discharging-color"], Store, "discharging color [default #FF8800]");
         ap.parse_args_or_exit();
     }
 
