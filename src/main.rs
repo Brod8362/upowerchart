@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let (charge, power) = history::get_history(&device)?;
 
-    history::generate_graph(&charge, &power)?;
+    history::generate_graph(&charge, &power, &device)?;
     
     Ok(())
 }

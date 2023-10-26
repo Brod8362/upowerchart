@@ -1,6 +1,6 @@
 use std::{path::Path, error::Error, cmp::max};
 
-use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color}};
+use plotters::{prelude::{BitMapBackend, IntoDrawingArea, ChartBuilder, LabelAreaPosition}, series::{LineSeries, AreaSeries}, style::{full_palette::{ORANGE}, RGBColor, TextStyle, IntoTextStyle, Color, CYAN}};
 
 const UPOWER_PATH: &str = "/var/lib/upower";
 
@@ -54,11 +54,7 @@ pub fn get_history(device_name: &String) -> Result<(Vec<HistoryEntry>, Vec<Histo
     Ok((charge, rate))
 }
 
-fn convert_entry(entry: &HistoryEntry) -> (i32, i32) {
-    (entry.time as i32, entry.value.round() as i32)
-}
-
-pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result<(), Box<dyn Error>> {
+pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry], model: &String) -> Result<(), Box<dyn Error>> {
     let width = 300;
     let height = 200;
     let label_area_size = 20;
@@ -68,8 +64,9 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     //style settings
     let axis_color = RGBColor(255,255,255);
     let background_color = RGBColor(0,0,0);
-    let charge_color = RGBColor(0,255,0);
-    let rate_color = ORANGE;
+    let percent_color = RGBColor(0,255,0);
+    let charging_color = CYAN;
+    let discharging_color = ORANGE;
     let font = ("monospace", 12);
 
     let hours: i32 = 3;
@@ -79,13 +76,35 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     let first_timestamp = last_timestamp - (60*60*hours as u64); //6 hours
 
     //convert data into time-series, relative to hours
-    let charge_series = charge.iter()
+    let charge_pct_series = charge.iter()
         .filter(|x| x.time > first_timestamp)
-        .map(|x| convert_entry(x));
+        .map(|entry| (entry.time as i32, entry.value.round() as i32));
 
-    let rate_series = power.iter()
+    //for when battery is charging
+    let chg_rate_series = power.iter()
         .filter(|x| x.time > first_timestamp)
-        .map(|x| convert_entry(x));
+        .map(|entry| {
+            let s = if entry.charging {
+                entry.value.round() as i32
+            } else {
+                0i32
+            };
+            (entry.time as i32, s)
+        });
+
+    // for when battery is discharging
+    let dischchg_rate_series = power.iter()
+        .filter(|x| x.time > first_timestamp && !x.charging)
+        .map(|entry| {
+            let s = if !entry.charging {
+                entry.value.round() as i32
+            } else {
+                0i32
+            };
+            (entry.time as i32, s)
+        });
+
+    
 
     let drawing_area = BitMapBackend::new("output.png", (width, height)).into_drawing_area();
     drawing_area.fill(&background_color)?;
@@ -139,15 +158,16 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
     //draw the actual data
     charge_chart.draw_series(
         AreaSeries::new(
-            charge_series, 
+            charge_pct_series, 
             0, 
-            charge_color.mix(0.2)
-        ).border_style(&charge_color)
+            percent_color.mix(0.2)
+        ).border_style(&percent_color)
     )?;
 
     let texts = [
-        (format!("BAT: {}%", charge.last().unwrap().value), &text_style.color(&charge_color)),
-        (format!("PWR: {:.1}W", power.last().unwrap().value), &text_style.color(&rate_color))
+        (model.clone(), &text_style),
+        (format!("BAT: {}%", charge.last().unwrap().value), &text_style.color(&percent_color)),
+        (format!("PWR: {:.1}W", power.last().unwrap().value), &text_style.color(&discharging_color))
     ];
 
     let (_, text_h) = drawing_area.estimate_text_size("?", &text_style)?;
@@ -159,6 +179,7 @@ pub fn generate_graph(charge: &[HistoryEntry], power: &[HistoryEntry]) -> Result
         x = x + tx as i32 + 5; //5 is text margin
     }
     
-    rate_chart.draw_series(LineSeries::new(rate_series, rate_color))?;
+    rate_chart.draw_series(LineSeries::new(chg_rate_series, charging_color))?;
+    rate_chart.draw_series(LineSeries::new(dischchg_rate_series, discharging_color))?;
     Ok(())
 }
